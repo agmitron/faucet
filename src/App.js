@@ -17,12 +17,18 @@ function App() {
 
   const reloadEffect = useCallback(() => reload(!shouldReload), [shouldReload])
 
+  const setAccountListener = (provider) => {
+    provider.on('accountsChanged', accounts => setAccount(accounts[0]))
+  }
+
   useEffect(() => {
     const loadProvider = async () => {
       const provider = await detectEthereumProvider();
-      const contract = await loadContract('Faucet', provider)
 
       if (provider) {
+        const contract = await loadContract('Faucet', provider)
+        setAccountListener(provider)
+
         setWeb3API({
           web3: new Web3(provider),
           provider,
@@ -44,7 +50,7 @@ function App() {
     }
 
     web3API.contract && loadBalance()
-  }, [web3API, web3API.contract, shouldReload])
+  }, [web3API, web3API.contract, shouldReload, account])
 
   useEffect(() => {
     const getAccount = async () => {
@@ -96,6 +102,16 @@ function App() {
             {
               account
                 ? <span>{account}</span>
+                  : !web3API.provider
+                    ? <>
+                        <div className="notification is-warning is-small is-rounded">
+                          Wallet is not detected! &nbsp;
+                          <a target="_blank" href="https://docs.metamask.io" rel="noreferrer">
+                            Install Metamask
+                          </a>
+                        </div>
+                      </>
+
                 : <button
                   className="button is-small"
                   onClick={connectWallet}
