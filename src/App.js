@@ -7,6 +7,7 @@ import { loadContract } from './utils/loadContract';
 function App() {
   const [web3API, setWeb3API] = useState({
     web3: null,
+    isProviderLoaded: false,
     provider: null,
     contract: null
   })
@@ -15,15 +16,17 @@ function App() {
   const [balance, setBalance] = useState(null)
   const [shouldReload, reload] = useState(false)
 
+  const canConnectToContract = account && web3API.contract
   const reloadEffect = useCallback(() => reload(!shouldReload), [shouldReload])
 
   const setAccountListener = (provider) => {
     provider.on('accountsChanged', accounts => setAccount(accounts[0]))
+    provider.on('chainChanged', _ => window.location.reload())
   }
 
   useEffect(() => {
     const loadProvider = async () => {
-      const provider = await detectEthereumProvider();
+      const provider = await detectEthereumProvider()
 
       if (provider) {
         const contract = await loadContract('Faucet', provider)
@@ -32,9 +35,11 @@ function App() {
         setWeb3API({
           web3: new Web3(provider),
           provider,
-          contract
+          contract,
+          isProviderLoaded: true
         })
       } else {
+        setWeb3API(prev => ({ ...prev, isProviderLoaded: true }))
         console.error("Please, install Metamask.")
       }
     }
@@ -102,26 +107,27 @@ function App() {
             {
               account
                 ? <span>{account}</span>
-                  : !web3API.provider
-                    ? <>
-                        <div className="notification is-warning is-small is-rounded">
-                          Wallet is not detected! &nbsp;
-                          <a target="_blank" href="https://docs.metamask.io" rel="noreferrer">
-                            Install Metamask
-                          </a>
-                        </div>
-                      </>
+                : !web3API.provider
+                  ? <>
+                    <div className="notification is-warning is-small is-rounded">
+                      Wallet is not detected! &nbsp;
+                      <a target="_blank" href="https://docs.metamask.io" rel="noreferrer">
+                        Install Metamask
+                      </a>
+                    </div>
+                  </>
 
-                : <button
-                  className="button is-small"
-                  onClick={connectWallet}
-                >
-                  Connect wallet
-                </button>
+                  : <button
+                    className="button is-small"
+                    onClick={connectWallet}
+                  >
+                    Connect wallet
+                  </button>
             }
+
           </div>
           {
-            account && <>
+            canConnectToContract && <>
               <div className="balance-view is-size-2 my-4">
                 Current Balance: <strong>{balance}</strong> ETH
               </div>
